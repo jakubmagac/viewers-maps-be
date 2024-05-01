@@ -4,28 +4,120 @@
   <meta charset='UTF-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1.0'>
   <title>Document</title>
-  <script>
-    const ROOM_ID = "<%= roomId %>"
-  </script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js" defer></script>
   <script src="/socket.io/socket.io.js" defer></script>
   <script src="script.js" defer></script>
   <style>
-    #video-grid {
+    body {
+      font-family: sans-serif; /* Use a more modern default font */
       display: grid;
       grid-template-columns: repeat(auto-fill, 300px);
       grid-auto-rows: 300px;
+      grid-template-columns: 1fr 1fr; /* Divide screen into video and chat sections */
+      height: 100vh; /* Set body height to 100% viewport height */
+      margin: 0; /* Remove default body margin */
+      background-color: #f5f5f5; /* Light background color */
+    }
+    #video-grid {
+      display: flex; /* Change to flexbox for better responsiveness */
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem; /* Add some padding */
     }
     #video {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
+    
+    #video-grid video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      aspect-ratio: 16/9; /* Maintain aspect ratio for videos */
+      border-radius: 5px; /* Add rounded corners */
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    }
+
+    #chat-container {
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      max-width: 100%; /* Set maximum width for the chat container */
+    }
+
+    #chat-input {
+      width: calc(100% - 22px); /* Adjust input width to accommodate button padding and border */
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    #send-button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    #file-input {
+      margin-top: 10px;
+    }
+
+    #upload-button {
+      padding: 10px 20px;
+      background-color: #00a537;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+
+    #chat-display {
+      border: 1px solid #ccc;
+      height: 40%;
+      overflow-y: scroll;
+      padding: 10px;
+      margin-bottom: 1%;
+      border-radius: 5px;
+      background-color: #fff;
+    }
+
+
+    .message {
+      padding: 10px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      font-size: 14px; /* Slightly smaller font size */
+    }
+
+    .message.sender {
+      background-color: #007bff;
+      color: #fff;
+    }
+
+    .message.sender + .message.sender,
+    .message + .message {
+      margin-top: -5px; /* Maintain message grouping */
+    }
   </style>
 </head>
 <body>
-  <div id='video-grid'>
-
+  <div id="video-grid"></div>
+  <div id="chat-container">
+    <div id="chat-display"></div>
+    <input type="text" id="chat-input" placeholder="Zadajte Vašu správu...">
+    <input type="text" id="contact-input" placeholder="Call id...">
+    <button id="send-button">Odoslať správu</button>
+    <input type="file" id="file-input">
+    <button id="upload-button">Nahrať súbor</button>
   </div>
 </body>
 </html>

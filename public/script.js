@@ -7,9 +7,17 @@ const myPeer = new Peer(undefined, {
 
 const myVideo = document.createElement('video')
 myVideo.muted = "muted"
+const chatInput = document.getElementById('chat-input');
+const sendButton = document.getElementById('send-button');
+const chatDisplay = document.getElementById('chat-display');
+const fileInput = document.getElementById('file-input');
+const uploadButton = document.getElementById('upload-button');
+const contactId = document.getElementById('contact-input');
 
 console.log(myVideo.muted)
 const peers = {}
+
+let clientId = undefined;
 
 navigator.mediaDevices.getUserMedia({
   video: true,
@@ -29,15 +37,15 @@ navigator.mediaDevices.getUserMedia({
   socket.on('user-connected', userId => {
     connectToNewUser(userId, stream)
   })
+
+  socket.on('me', id => {
+    clientId = id
+  })
 })
 
 socket.on('user-disconected', userId => {
   console.log('disconect')
   if(peers[userId]) peers[userId].close()
-})
-
-myPeer.on('open', id => {
-  socket.emit('join-room', ROOM_ID, id)
 })
 
 function connectToNewUser(userId, stream) {
@@ -54,8 +62,6 @@ function connectToNewUser(userId, stream) {
   peers[userId] = call
 }
 
-
-
 function addVideoStream(video, stream) {
   video.srcObject = stream
   video.addEventListener('loadedmetadata', () => {
@@ -63,3 +69,75 @@ function addVideoStream(video, stream) {
   })
   videoGrid.append(video)
 }
+
+sendButton.addEventListener('click', () => {
+  const message = chatInput.value;
+  if (message.trim() !== '') {
+    socket.emit('chat-message', { from: clientId, to: contactId.value, message });
+    displayMessage(clientId, message);
+    chatInput.value = '';
+  }
+});
+
+// uploadButton.addEventListener('click', () => {
+//   console.log("Upload button clicked"); // Check if this message appears in the console
+//   const file = fileInput.files[0];
+//   console.log("Selected file:", file); // Check if the selected file is logged
+//   if (file) {
+//     sendFile(file);
+//   }
+// });
+
+// function sendFile(file) {
+//   const reader = new FileReader();
+//   reader.onload = () => {
+//     const fileData = reader.result;
+//     socket.emit('file-uploaded', { filename: file.name, data: fileData });
+//   };
+//   reader.readAsDataURL(file);
+// }
+
+socket.on('chat-message', (data) => {
+  displayMessage(data.from, data.message);
+});
+
+// socket.on('file-uploaded', (filename, data) => {
+//   if (data && data.hasOwnProperty('data')) { // Check if 'data' exists and has the 'data' property
+//     displayFile(filename, data.data);
+//   } else {
+//     console.error("Invalid file data received:", data);
+//     alert("Error: Failed to receive file data from the server.");
+//   }
+// });
+
+function displayMessage(username, message) {
+  const messageElement = document.createElement('div');
+  messageElement.innerText = `Užívateľ: ${username} píše: ${message}`;
+  chatDisplay.appendChild(messageElement);
+  chatDisplay.scrollTop = chatDisplay.scrollHeight;
+}
+
+// function displayFile(filename, data) {
+//   if (data) {
+//     // Create a blob from the base64 data
+//     const byteCharacters = atob(data);
+//     const byteNumbers = new Array(byteCharacters.length);
+//     for (let i = 0; i < byteCharacters.length; i++) {
+//       byteNumbers[i] = byteCharacters.charCodeAt(i);
+//     }
+//     const byteArray = new Uint8Array(byteNumbers);
+//     const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+
+//     // Create a link element to download the file
+//     const link = document.createElement('a');
+//     link.href = URL.createObjectURL(blob);
+//     link.download = filename;
+//     link.innerText = filename;
+
+//     // Append the link to the chat display
+//     chatDisplay.appendChild(link);
+//     chatDisplay.appendChild(document.createElement('br')); // Add a line break for spacing
+//   } else {
+//     console.error("File data is null or undefined");
+//   }
+// }
