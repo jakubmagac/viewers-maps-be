@@ -3,8 +3,6 @@ const app = express()
 const server = require('http').Server(app)
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
-// Store chat messages for each room
-const chatHistory = {};
 
 const io = require('socket.io')(server, {
   cors: {
@@ -32,7 +30,6 @@ io.on('connection', socket => {
   })
 
   socket.on("answerCall", (data) => {
-    console.log(data.to)
     io.to(data.to).emit("callAccepted", data.signal)
   })
 
@@ -41,6 +38,9 @@ io.on('connection', socket => {
     io.to(data.to).emit('chat-message', { from: data.from, message: data.message });
   });
 
+  socket.on('screen-sharing', (data) => {
+    io.emit('screen-sharing');
+  });
   // Send chat history to the newly joined user, if available
   // if (chatHistory[roomId]) {
   //   chatHistory[roomId].forEach(({ sender, message }) => {

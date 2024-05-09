@@ -3,109 +3,106 @@
 <head>
   <meta charset='UTF-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-  <title>Document</title>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js" defer></script>
-  <script src="/socket.io/socket.io.js" defer></script>
+  <title>Video Chat & Messenger</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css
+"> 
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js
+" defer></script>
+  <script src="/socket.io/socket.io.js
+" defer></script>
   <script src="script.js" defer></script>
   <style>
+    
     body {
-      font-family: sans-serif; /* Use a more modern default font */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: grid;
-      grid-template-columns: repeat(auto-fill, 300px);
-      grid-auto-rows: 300px;
-      grid-template-columns: 1fr 1fr; /* Divide screen into video and chat sections */
-      height: 100vh; /* Set body height to 100% viewport height */
-      margin: 0; /* Remove default body margin */
-      background-color: #f5f5f5; /* Light background color */
+      grid-template-columns: 1fr 0.55fr; /* pomer sirky kamery a chatu */
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f2f5;
     }
+
     #video-grid {
-      display: flex; /* Change to flexbox for better responsiveness */
+      display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 1rem; /* Add some padding */
+      padding: 1rem;
     }
-    #video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    
+
     #video-grid video {
       width: 100%;
-      height: 100%;
+      height: auto;
+      max-height: 100%;
       object-fit: cover;
-      aspect-ratio: 16/9; /* Maintain aspect ratio for videos */
-      border-radius: 5px; /* Add rounded corners */
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     }
 
     #chat-container {
       display: flex;
       flex-direction: column;
       padding: 1rem;
-      max-width: 100%; /* Set maximum width for the chat container */
-    }
-
-    #chat-input {
-      width: calc(100% - 22px); /* Adjust input width to accommodate button padding and border */
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-
-    #send-button {
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 10px;
-    }
-
-    #file-input {
-      margin-top: 10px;
-    }
-
-    #upload-button {
-      padding: 10px 20px;
-      background-color: #00a537;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 10px;
+      background-color: #fff;
+      border-left: 1px solid #ddd;
     }
 
     #chat-display {
-      border: 1px solid #ccc;
-      height: 40%;
-      overflow-y: scroll;
+      flex: 1;
+      overflow-y: auto;
       padding: 10px;
-      margin-bottom: 1%;
-      border-radius: 5px;
-      background-color: #fff;
     }
 
+    #chat-input {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 25px;
+      margin-top: 10px;
+      resize: none;
+      font-size: 16px;
+      flex: 1;
+    }
+
+    #send-button {
+      padding: 10px;
+      background-color: #0084ff;
+      color: #fff;
+      border: none;
+      border-radius: 50%; 
+      cursor: pointer;
+      font-size: 20px;
+      margin-left: 10px; 
+    }
+
+    .message-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      margin-bottom: 10px;
+    }
 
     .message {
-      padding: 10px;
-      margin-bottom: 5px;
-      border-radius: 5px;
-      font-size: 14px; /* Slightly smaller font size */
+      display: inline-block;
+      padding: 10px 15px;
+      border-radius: 20px;
+      font-size: 16px;
+      max-width: calc(70% - 30px); 
+      word-wrap: break-word; 
+      margin-bottom: 5px; 
     }
 
     .message.sender {
-      background-color: #007bff;
+      background-color: #0084ff;
       color: #fff;
+      align-self: flex-end;
     }
 
-    .message.sender + .message.sender,
-    .message + .message {
-      margin-top: -5px; /* Maintain message grouping */
+    .message.receiver {
+      background-color: #f1f0f0;
+    }
+
+    .message-text {
+      display: inline-block; 
+      max-width: 100%;
     }
   </style>
 </head>
@@ -113,11 +110,54 @@
   <div id="video-grid"></div>
   <div id="chat-container">
     <div id="chat-display"></div>
-    <input type="text" id="chat-input" placeholder="Zadajte Vašu správu...">
-    <input type="text" id="contact-input" placeholder="Call id...">
-    <button id="send-button">Odoslať správu</button>
-    <input type="file" id="file-input">
-    <button id="upload-button">Nahrať súbor</button>
+    <div style="display: flex; align-items: center;">
+      <input type="text" id="chat-input" placeholder="Type a message...">
+      <button id="send-button"><i class="fas fa-paper-plane"></i></button>
+    </div>
   </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const chatInput = document.getElementById("chat-input");
+      const sendButton = document.getElementById("send-button");
+      const chatDisplay = document.getElementById("chat-display");
+
+      // Event listener for clicking send button
+      sendButton.addEventListener("click", function () {
+        sendMessage();
+      });
+
+      // Event listener for pressing Enter key
+      chatInput.addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+          sendMessage();
+        }
+      });
+
+      // Function to send message
+      function sendMessage() {
+        const messageText = chatInput.value.trim(); // Get input value and remove whitespace
+
+        if (messageText !== "") { // Check if message is not empty
+          const messageContainer = document.createElement("div");
+          messageContainer.classList.add("message-container");
+
+          const messageDiv = document.createElement("div");
+          messageDiv.classList.add("message", "sender");
+          
+          const messageTextDiv = document.createElement("div");
+          messageTextDiv.classList.add("message-text");
+          messageTextDiv.textContent = messageText;
+          
+          messageDiv.appendChild(messageTextDiv);
+          messageContainer.appendChild(messageDiv);
+
+          chatDisplay.appendChild(messageContainer); // Append message to chat display
+          chatInput.value = ""; // Clear input field
+          chatDisplay.scrollTop = chatDisplay.scrollHeight; // Scroll to bottom of chat display
+        }
+      }
+    });
+  </script>
 </body>
 </html>

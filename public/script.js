@@ -48,20 +48,6 @@ socket.on('user-disconected', userId => {
   if(peers[userId]) peers[userId].close()
 })
 
-function connectToNewUser(userId, stream) {
-  const call = myPeer.call(userId, stream)
-  const video = document.createElement('video')
-
-  call.on('stream', userVideoStream => {
-    addVideoStream(video, userVideoStream)
-  })
-  call.on('close', () => {
-    video.remove()
-  })
-
-  peers[userId] = call
-}
-
 function addVideoStream(video, stream) {
   video.srcObject = stream
   video.addEventListener('loadedmetadata', () => {
@@ -140,4 +126,115 @@ function displayMessage(username, message) {
 //   } else {
 //     console.error("File data is null or undefined");
 //   }
+// }
+
+
+const shareScreenButton = document.getElementById('share-screen-button');
+let screenStream = null;
+let screenSharing = false;
+
+shareScreenButton.addEventListener('click', () => {
+  if (!screenSharing) {
+    startScreenSharing();
+  } else {
+    stopScreenSharing();
+  }
+});
+
+function startScreenSharing() {
+  navigator.mediaDevices.getDisplayMedia({ video: true })
+    .then(stream => {
+      screenStream = stream;
+      addVideoStream(stream);
+      shareScreenButton.innerText = 'Zastaviť zdieľanie obrazovky';
+      const videoTrack = stream.getVideoTracks()[0];
+      console.log(videoTrack)
+
+      console.log(peers)
+      Object.values(peers).forEach(peer => {
+        const sender = peer.peerConnection.getSenders().find(sender => sender.track.kind === videoTrack.kind);
+        sender.replaceTrack(videoTrack);
+
+
+        console.log(sender)
+      });
+      screenSharing = true;
+
+
+      // Broadcast screen sharing to all users in the room
+      socket.emit('screen-sharing', contactId.value);
+      
+      // Connect to screen sharing for existing users
+      connectToScreenSharing();
+    })
+    .catch(error => {
+      console.error('Error accessing screen:', error);
+      alert('Error accessing screen: ' + error);
+    });
+}
+
+socket.on('screen-sharing', () => {
+  // When someone starts screen sharing, connect to their screen stream
+  connectToScreenSharing();
+});
+
+function connectToScreenSharing() {
+
+  const videoTrack = screenStream.getVideoTracks()[0];
+  Object.values(peers).forEach(peer => {
+    const sender = peer.peerConnection.getSenders().find(sender => sender.track.kind === videoTrack.kind);
+    if (sender) {
+      sender.replaceTrack(videoTrack);
+    } else {
+      const screenCall = myPeer.call(peer.peer, screenStream);
+      const screenVideo = document.createElement('video');
+      screenCall.on('stream', userScreenStream => {
+        addVideoStream(screenVideo, userScreenStream);
+      });
+      screenCall.on('close', () => {
+        screenVideo.remove();
+      });
+      peers[peer.peer] = screenCall;
+    }
+  });
+
+}
+
+// Modify the connectToNewUser function to handle both video stream and screen sharing stream
+function connectToNewUser(userId, stream) {
+  const call = myPeer.call(userId, stream)
+  const video = document.createElement('video')
+
+  call.on('stream', userVideoStream => {
+    addVideoStream(video, userVideoStream)
+  })
+  call.on('close', () => {
+    video.remove()
+  })
+
+  peers[userId] = call
+  // If screen sharing is active, connect to the screen sharing stream as well
+  if (screenSharing) {
+    const screenCall = myPeer.call(userId, screenStream);
+    const screenVideo = document.createElement('video');
+    screenCall.on('stream', userScreenStream => {
+      addVideoStream(screenVideo, userScreenStream);
+    });
+    screenCall.on('close', () => {
+      screenVideo.remove();
+    });
+    peers[userId] = screenCall;
+  }
+}
+
+
+// function stopScreenSharing() {
+//   screenStream.getTracks().forEach(track => track.stop());
+//   document.querySelectorAll('video').forEach(video => {
+//     if (video.srcObject === screenStream) {
+//       video.remove();
+//     }
+//   });
+//   screenSharing = false;
+//   shareScreenButton.innerText = 'Zdieľať obrazovku';
 // }
